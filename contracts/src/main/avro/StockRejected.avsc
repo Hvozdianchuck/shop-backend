@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "StockRejected",
+  "namespace": "com.shop.contracts",
+  "fields": [
+    {"name": "orderId", "type": {"type": "string", "logicalType": "uuid"}},
+    {"name": "occurredAt", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "missingSkus", "type": {"type": "array", "items": "string"}}
+  ]
+}
