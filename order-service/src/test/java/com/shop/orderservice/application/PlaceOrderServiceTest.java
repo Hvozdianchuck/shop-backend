@@ -3,14 +3,17 @@ package com.shop.orderservice.application;
 import com.shop.orderservice.domain.CatalogProduct;
 import com.shop.orderservice.domain.CatalogUnavailableException;
 import com.shop.orderservice.domain.Order;
+import com.shop.orderservice.domain.OrderEvents;
 import com.shop.orderservice.domain.OrderLine;
 import com.shop.orderservice.domain.OrderRepository;
 import com.shop.orderservice.domain.OrderStatus;
 import com.shop.orderservice.domain.ProductCatalog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -28,7 +31,10 @@ class PlaceOrderServiceTest {
 
     private final FakeCatalog catalog = new FakeCatalog();
     private final OrderRepository orders = mock(OrderRepository.class);
-    private final PlaceOrderService service = new PlaceOrderService(catalog, orders);
+    private final List<Order> published = new ArrayList<>();
+    private final OrderEvents events = published::add;
+    private final PlaceOrderService service =
+            new PlaceOrderService(catalog, orders, events, TransactionOperations.withoutTransaction());
 
     @BeforeEach
     void setUp() {
@@ -48,6 +54,7 @@ class PlaceOrderServiceTest {
                 new OrderLine("KBD-1", 1, new BigDecimal("89.00")));
         assertThat(order.getTotal()).isEqualByComparingTo("138.80");
         verify(orders).save(order);
+        assertThat(published).containsExactly(order);
     }
 
     @Test
@@ -65,6 +72,7 @@ class PlaceOrderServiceTest {
                         e -> assertThat(e.getSkus()).containsExactly("CAM-720", "NOPE"));
 
         verify(orders, never()).save(any());
+        assertThat(published).isEmpty();
     }
 
     @Test

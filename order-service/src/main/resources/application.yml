@@ -11,6 +11,12 @@ spring:
     open-in-view: false
   kafka:
     bootstrap-servers: localhost:9092
+    producer:
+      acks: all
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      properties:
+        enable.idempotence: true
+        spring.json.add.type.headers: false
   http:
     clients:
       connect-timeout: 1s
