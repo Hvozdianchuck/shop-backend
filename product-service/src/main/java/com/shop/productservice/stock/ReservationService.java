@@ -29,6 +29,11 @@ public class ReservationService {
     }
 
     public ReservationResult reserve(UUID orderId, List<ReservationLine> requested) {
+        var existing = reservations.findById(orderId);
+        if (existing.isPresent()) {
+            log.info("Order {} already handled, repeating the stored result", orderId);
+            return existing.get().result();
+        }
         var lines = mergeBySku(requested);
         try {
             return transaction.execute(status -> takeAll(orderId, lines));

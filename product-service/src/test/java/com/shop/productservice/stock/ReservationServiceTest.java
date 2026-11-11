@@ -59,6 +59,19 @@ class ReservationServiceTest {
     }
 
     @Test
+    void repeatsStoredResultForDuplicateOrderWithoutTakingStockAgain() {
+        var mouse = product(10);
+        var orderId = UUID.randomUUID();
+        var lines = List.of(new ReservationLine(mouse, 4));
+
+        var first = service.reserve(orderId, lines);
+        var second = service.reserve(orderId, lines);
+
+        assertThat(second).isEqualTo(first);
+        assertThat(available(mouse)).isEqualTo(6);
+    }
+
+    @Test
     void failsOnUnknownSkuWithoutTakingStock() {
         var mouse = product(10);
         var orderId = UUID.randomUUID();

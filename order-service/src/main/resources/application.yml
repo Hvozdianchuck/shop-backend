@@ -11,6 +11,16 @@ spring:
     open-in-view: false
   kafka:
     bootstrap-servers: localhost:9092
+    consumer:
+      group-id: order-service
+      auto-offset-reset: earliest
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+        spring.json.value.default.type: com.shop.orderservice.infrastructure.StockEvent
+        spring.json.use.type.headers: false
+    listener:
+      ack-mode: record
     producer:
       acks: all
       value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
