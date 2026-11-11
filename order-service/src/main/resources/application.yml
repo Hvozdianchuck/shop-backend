@@ -11,6 +11,46 @@ spring:
     open-in-view: false
   kafka:
     bootstrap-servers: localhost:9092
+  http:
+    clients:
+      connect-timeout: 1s
+      read-timeout: 2s
 
 server:
   port: 8081
+
+catalog:
+  base-url: http://localhost:8082
+
+resilience4j:
+  retry:
+    instances:
+      catalog:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        enable-randomized-wait: true
+        randomized-wait-factor: 0.5
+        retry-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+  circuitbreaker:
+    instances:
+      catalog:
+        sliding-window-type: count-based
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 1500ms
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        record-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+  bulkhead:
+    instances:
+      catalog:
+        max-concurrent-calls: 20
+        max-wait-duration: 0
