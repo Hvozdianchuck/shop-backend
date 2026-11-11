@@ -1,0 +1,18 @@
+spring:
+  sql:
+    init:
+      mode: always
+  kafka:
+    producer:
+      acks: all
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+      properties:
+        enable.idempotence: true
+        schema.registry.url: mock://messaging-test
+        value.subject.name.strategy: io.confluent.kafka.serializers.subject.TopicRecordNameStrategy
+
+shop:
+  outbox:
+    relay-enabled: false
+  avro:
+    trusted-packages: com.shop.contracts
