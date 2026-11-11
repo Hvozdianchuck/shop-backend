@@ -1,0 +1,60 @@
+### Place an order
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "items": [
+    {"sku": "MOUSE-1", "quantity": 2},
+    {"sku": "HDMI-2M", "quantity": 1}
+  ]
+}
+
+> {% client.global.set("orderId", response.body.id); %}
+
+### Check its status (PENDING right after the POST, then CONFIRMED)
+GET http://localhost:8081/api/orders/{{orderId}}
+
+### More monitors than in stock (5) -> REJECTED a moment later
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "items": [
+    {"sku": "MON-27", "quantity": 50}
+  ]
+}
+
+> {% client.global.set("orderId", response.body.id); %}
+
+### Check the rejected order
+GET http://localhost:8081/api/orders/{{orderId}}
+
+### Unknown and inactive products -> 422 with unknownSkus
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "items": [
+    {"sku": "NOPE", "quantity": 1},
+    {"sku": "CAM-720", "quantity": 1}
+  ]
+}
+
+### Invalid request -> 400
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "items": [
+    {"sku": "MOUSE-1", "quantity": 0}
+  ]
+}
+
+### Circuit breaker state for the price lookup (stop product-service to see it open)
+GET http://localhost:8081/actuator/circuitbreakers
+
+### Recent retries and circuit breaker transitions
+GET http://localhost:8081/actuator/retryevents
+
+###
+GET http://localhost:8081/actuator/circuitbreakerevents

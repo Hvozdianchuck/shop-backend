@@ -1,0 +1,5 @@
+### Prices for a few SKUs (CAM-720 is inactive, NOPE does not exist)
+GET http://localhost:8082/api/products?skus=MOUSE-1,KBD-1,CAM-720,NOPE
+
+### Health
+GET http://localhost:8082/actuator/health

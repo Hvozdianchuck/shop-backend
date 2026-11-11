@@ -76,3 +76,9 @@ resilience4j:
       catalog:
         max-concurrent-calls: 20
         max-wait-duration: 0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,circuitbreakers,circuitbreakerevents,retryevents
