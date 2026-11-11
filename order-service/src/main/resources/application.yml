@@ -49,6 +49,12 @@ resilience4j:
         record-exceptions:
           - org.springframework.web.client.HttpServerErrorException
           - org.springframework.web.client.ResourceAccessException
+  ratelimiter:
+    instances:
+      placeOrder:
+        limit-for-period: 50
+        limit-refresh-period: 1s
+        timeout-duration: 0
   bulkhead:
     instances:
       catalog:
