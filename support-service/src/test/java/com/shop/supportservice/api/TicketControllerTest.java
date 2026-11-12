@@ -1,5 +1,6 @@
 package com.shop.supportservice.api;
 
+import com.shop.supportservice.FakeAiConfiguration;
 import com.shop.supportservice.TestcontainersConfiguration;
 import com.shop.supportservice.ticket.TicketRepository;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, FakeAiConfiguration.class})
 class TicketControllerTest {
 
     @Autowired

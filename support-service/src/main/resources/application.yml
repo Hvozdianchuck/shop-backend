@@ -9,6 +9,20 @@ spring:
     password: ${POSTGRES_PASSWORD:shop}
   jpa:
     open-in-view: false
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      embedding:
+        options:
+          model: bge-m3
+    vectorstore:
+      pgvector:
+        table-name: policy_chunks
+        # The table comes from a Flyway migration, with extra columns for full-text search.
+        initialize-schema: false
+        index-type: hnsw
+        distance-type: cosine-distance
+        dimensions: 1024
 
 server:
   port: 8083
