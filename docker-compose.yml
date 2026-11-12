@@ -49,9 +49,10 @@ services:
     ports:
       - "11434:11434"
     environment:
-      # One request and one model at a time: on a CPU, parallel requests only slow each other down.
+      # One request at a time: on a CPU, parallel requests only slow each other down.
+      # Two models stay loaded, so a policy search (bge-m3) does not unload the chat model mid-ticket.
       OLLAMA_NUM_PARALLEL: 1
-      OLLAMA_MAX_LOADED_MODELS: 1
+      OLLAMA_MAX_LOADED_MODELS: 2
       OLLAMA_KEEP_ALIVE: 2h
     volumes:
       - ollama:/root/.ollama

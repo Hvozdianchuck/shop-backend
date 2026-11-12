@@ -156,4 +156,50 @@
 		</plugins>
 	</build>
 
+	<profiles>
+		<!-- Runs the evaluation against the model in docker compose: ./mvnw verify -Peval -pl support-service -->
+		<profile>
+			<id>eval</id>
+			<dependencies>
+				<dependency>
+					<groupId>com.github.pemistahl</groupId>
+					<artifactId>lingua</artifactId>
+					<version>1.2.2</version>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>build-helper-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>add-eval-sources</id>
+								<phase>generate-test-sources</phase>
+								<goals>
+									<goal>add-test-source</goal>
+								</goals>
+								<configuration>
+									<sources>
+										<source>src/eval/java</source>
+									</sources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<includes>
+								<include>**/*Eval.java</include>
+							</includes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>

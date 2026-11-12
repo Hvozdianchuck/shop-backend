@@ -1,0 +1,25 @@
+{"id": "r01", "query": "Can I pay with BLIK?", "section": "payments#payment-methods"}
+{"id": "r02", "query": "Czy mogę odebrać zamówienie w Paczkomacie?", "section": "delivery#shipping-methods"}
+{"id": "r03", "query": "Чи можна відправити через Нову Пошту?", "section": "delivery#shipping-methods"}
+{"id": "r04", "query": "How long do I have to send something back?", "section": "returns#return-window"}
+{"id": "r05", "query": "Коли я отримаю гроші після повернення?", "section": "returns#refund-time"}
+{"id": "r06", "query": "Ile trwa dostawa do Niemiec?", "section": "delivery#delivery-times"}
+{"id": "r07", "query": "Do I pay for the return label?", "section": "returns#return-shipping-costs"}
+{"id": "r08", "query": "Що робити, якщо монітор не вмикається одразу після доставки?", "section": "warranty#dead-on-arrival"}
+{"id": "r09", "query": "Are scratches from dropping the device covered by warranty?", "section": "warranty#what-the-warranty-does-not-cover"}
+{"id": "r10", "query": "Potrzebuję fakturę z NIP", "section": "invoices#invoice-for-a-company"}
+{"id": "r11", "query": "I entered the wrong company name on my invoice", "section": "invoices#correcting-an-invoice"}
+{"id": "r12", "query": "Скільки діє подарунковий сертифікат?", "section": "promotions#gift-cards"}
+{"id": "r13", "query": "The price went down a day after I bought it, can I get the difference?", "section": "promotions#price-drop-after-purchase"}
+{"id": "r14", "query": "Kod BLIK wygasł, co teraz?", "section": "payments#failed-payments"}
+{"id": "r15", "query": "Why do I see two charges on my card?", "section": "payments#double-charge"}
+{"id": "r16", "query": "Чи потрібно платити мито при доставці в Україну?", "section": "delivery#customs-for-ukraine"}
+{"id": "r17", "query": "Is shipping free over a certain amount?", "section": "delivery#shipping-costs"}
+{"id": "r18", "query": "Kiedy dostanę numer do śledzenia przesyłki?", "section": "delivery#tracking"}
+{"id": "r19", "query": "Can I add another item to an order I already placed?", "section": "order-changes#changing-products-in-an-order"}
+{"id": "r20", "query": "Чому моє замовлення відхилено?", "section": "order-changes#rejected-orders"}
+{"id": "r21", "query": "How do I get my personal data removed?", "section": "privacy#access-and-deletion"}
+{"id": "r22", "query": "W jakich językach odpowiadacie?", "section": "support#languages"}
+{"id": "r23", "query": "The parcel is missing one of the items I ordered", "section": "damaged-parcels#wrong-or-missing-item"}
+{"id": "r24", "query": "Чи можна повернути навушники-вкладиші, якщо я їх відкрив?", "section": "returns#items-that-cannot-be-returned"}
+{"id": "r25", "query": "What happens to my money if I cancel?", "section": "order-changes#refund-after-cancellation"}
