@@ -15,6 +15,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.http.MediaType;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -26,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
@@ -96,6 +99,24 @@ class OrderControllerTest {
         when(orders.findWithLinesById(id)).thenReturn(Optional.empty());
 
         assertThat(mvc.get().uri("/api/orders/{id}", id)).hasStatus(404);
+    }
+
+    @Test
+    void listsOrdersPageByPage() {
+        var order = Order.place(List.of(new OrderLine("MOUSE-1", 1, new BigDecimal("24.90"))));
+        when(orders.findPageWithLines(any())).thenReturn(new SliceImpl<>(List.of(order), PageRequest.of(1, 1), true));
+
+        var result = mvc.get().uri("/api/orders?page=1&size=1");
+
+        assertThat(result).hasStatus(200);
+        assertThat(result).bodyJson().extractingPath("$.items[0].id").isEqualTo(order.getId().toString());
+        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"page=-1", "size=0", "size=101"})
+    void rejectsInvalidPage(String query) {
+        assertThat(mvc.get().uri("/api/orders?" + query)).hasStatus(400);
     }
 
     @Test
