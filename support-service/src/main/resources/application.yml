@@ -23,10 +23,43 @@ spring:
         index-type: hnsw
         distance-type: cosine-distance
         dimensions: 1024
+  http:
+    clients:
+      # Used by the Ollama client. A local model on a CPU can take more than a minute to answer.
+      connect-timeout: 2s
+      read-timeout: 120s
 
 server:
   port: 8083
   shutdown: graceful
+
+order-service:
+  base-url: http://localhost:8081
+  connect-timeout: 1s
+  read-timeout: 2s
+
+resilience4j:
+  retry:
+    instances:
+      orders:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+  circuitbreaker:
+    instances:
+      orders:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 2
+        record-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
 
 management:
   endpoints:
