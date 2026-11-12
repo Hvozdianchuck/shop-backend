@@ -12,5 +12,6 @@
 		<module>messaging-support</module>
 		<module>order-service</module>
 		<module>product-service</module>
+		<module>support-service</module>
 	</modules>
 </project>
