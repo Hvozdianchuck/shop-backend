@@ -60,7 +60,7 @@ class TicketWorkerTest {
     @Test
     void storesTriageResultWithPromptVersionAndTokens() {
         var id = intake.submit("Can I return a mouse I bought last week?").getId();
-        model.reply(json(policyAnswer()));
+        model.reply("You can return it within 14 days.").reply(json(policyAnswer()));
 
         worker.processWaiting();
 
@@ -70,7 +70,7 @@ class TicketWorkerTest {
         assertThat(ticket.getResult()).contains("\"replyDraft\": \"You can return it within 14 days.\"");
         assertThat(ticket.getPromptVersion()).isEqualTo("v1");
         assertThat(ticket.getModel()).isEqualTo("scripted");
-        assertThat(ticket.getInputTokens()).isEqualTo(100);
+        assertThat(ticket.getInputTokens()).isEqualTo(200);
     }
 
     @Test
@@ -106,7 +106,7 @@ class TicketWorkerTest {
     void picksTicketsUpAgainOnceCircuitHalfOpens() {
         var id = intake.submit("Can I return a mouse?").getId();
         circuitBreakers.circuitBreaker("model").transitionToOpenState();
-        model.reply(json(policyAnswer()));
+        model.reply("You can return it within 14 days.").reply(json(policyAnswer()));
 
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
             worker.processWaiting();

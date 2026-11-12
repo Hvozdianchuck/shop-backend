@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * One ticket, one short workflow: the model may call read-only tools a few times, then must answer with
+ * One ticket, one short workflow: the model may call read-only tools a few times, then is asked for
  * a {@link TriageResult}. The tool loop is driven here rather than by ChatClient's tool advisor, so the number
  * of calls is capped and every tool result is recorded for the checks that follow.
  */
@@ -32,6 +32,9 @@ import java.util.List;
 public class TriageService {
 
     static final int MAX_TOOL_CALLS = 3;
+    // Enough for a tool call (about 65 tokens); the free-text answer of this phase is only a draft for the JSON.
+    static final int TOOL_PHASE_MAX_TOKENS = 96;
+    private static final String FINAL_ANSWER = "Now write the final answer for the support agent as described in the instructions.";
     private static final int MAX_ERROR_LENGTH = 300;
 
     private final ChatModel chatModel;
@@ -69,19 +72,20 @@ public class TriageService {
         var defaults = (ToolCallingChatOptions) chatModel.getDefaultOptions();
         var withTools = defaults.mutate()
                 .toolCallbacks(ToolCallbacks.from(new OrderTools(orders, journal), new PolicyTools(policies, journal)))
+                .maxTokens(TOOL_PHASE_MAX_TOKENS)
                 .build();
         var withoutTools = defaults.mutate().build();
 
         List<Message> messages = new ArrayList<>(List.of(
-                new SystemMessage(prompts.systemPrompt(promptVersion, converter.getFormat())),
+                new SystemMessage(prompts.systemPrompt(promptVersion)),
                 new UserMessage("<customer_message>\n" + text + "\n</customer_message>")));
         var response = call.send(messages, withTools);
         var toolCalls = 0;
+        var finalRequest = FINAL_ANSWER;
         while (response.hasToolCalls()) {
             var requested = response.getResult().getOutput().getToolCalls().size();
             if (toolCalls + requested > MAX_TOOL_CALLS) {
-                messages.add(new UserMessage("No more tool calls are allowed. Answer now with the JSON object."));
-                response = call.send(messages, withoutTools);
+                finalRequest = "No more tool calls are allowed. " + FINAL_ANSWER;
                 break;
             }
             toolCalls += requested;
@@ -89,6 +93,14 @@ public class TriageService {
             messages = new ArrayList<>(executed.conversationHistory());
             response = call.send(messages, withTools);
         }
+        if (!response.hasToolCalls()) {
+            messages.add(response.getResult().getOutput());
+        }
+
+        // The JSON format goes in only now. With the schema in the first request, the model answers with JSON
+        // straight away and never calls a tool (measured: 0 tool calls on 40 tickets).
+        messages.add(new UserMessage(finalRequest + "\n" + converter.getFormat()));
+        response = call.send(messages, withoutTools);
 
         var parsed = parse(response);
         var retried = parsed.result() == null;

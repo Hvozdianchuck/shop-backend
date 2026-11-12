@@ -59,7 +59,8 @@ public class ScriptedChatModel implements ChatModel {
 
     @Override
     public ChatResponse call(Prompt prompt) {
-        prompts.add(prompt);
+        // The caller keeps adding to the same message list, so keep a copy of what was sent.
+        prompts.add(new Prompt(List.copyOf(prompt.getInstructions()), prompt.getOptions()));
         var next = script.poll();
         if (next == null) {
             throw new IllegalStateException("No scripted reply left");

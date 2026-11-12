@@ -21,11 +21,11 @@ public class PromptLibrary {
         return properties.promptVersion();
     }
 
-    public String systemPrompt(String version, String format) {
+    public String systemPrompt(String version) {
         var resource = resources.getResource("classpath:prompts/triage-" + version + ".st");
         if (!resource.exists()) {
             throw new IllegalArgumentException("Unknown prompt version " + version);
         }
-        return PromptTemplate.builder().resource(resource).build().render(Map.of("format", format));
+        return PromptTemplate.builder().resource(resource).build().render(Map.of());
     }
 }
