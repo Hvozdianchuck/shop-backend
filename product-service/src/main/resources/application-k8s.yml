@@ -1,0 +1,11 @@
+logging:
+  structured:
+    format:
+      console: ecs
+
+management:
+  tracing:
+    export:
+      otlp:
+        # Jaeger runs only in docker compose. Only the exporter is switched off, so trace ids still propagate.
+        enabled: false
