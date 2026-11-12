@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: shop
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - kafka.yaml
+  - schema-registry.yaml
+  - product-service.yaml
+  - order-service.yaml
+
+secretGenerator:
+  # Same local default as .env.example; this cluster only runs on a laptop.
+  - name: postgres
+    literals:
+      - POSTGRES_PASSWORD=shop
