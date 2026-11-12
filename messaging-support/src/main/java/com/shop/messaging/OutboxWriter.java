@@ -1,5 +1,7 @@
 package com.shop.messaging;
 
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumWriter;
@@ -7,19 +9,28 @@ import org.apache.avro.specific.SpecificRecord;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class OutboxWriter {
 
-    private final JdbcClient jdbc;
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    public OutboxWriter(JdbcClient jdbc) {
+    private final JdbcClient jdbc;
+    private final Tracer tracer;
+    private final Propagator propagator;
+
+    public OutboxWriter(JdbcClient jdbc, Tracer tracer, Propagator propagator) {
         this.jdbc = jdbc;
+        this.tracer = tracer;
+        this.propagator = propagator;
     }
 
     /**
@@ -39,9 +50,19 @@ public class OutboxWriter {
                 .param("topic", topic)
                 .param("key", aggregateId)
                 .param("payload", toJson(event))
-                .param("headers", "{}")
+                .param("headers", traceHeaders())
                 .update();
         return id;
+    }
+
+    // The relay sends the event later from its own thread; keeping the trace context lets it continue the same trace.
+    private String traceHeaders() {
+        var context = tracer.currentTraceContext().context();
+        Map<String, String> headers = new LinkedHashMap<>();
+        if (context != null) {
+            propagator.inject(context, headers, Map::put);
+        }
+        return JSON.writeValueAsString(headers);
     }
 
     private static String toJson(SpecificRecord event) {

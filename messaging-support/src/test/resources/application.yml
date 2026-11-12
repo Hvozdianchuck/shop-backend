@@ -1,8 +1,14 @@
 spring:
+  test:
+    tracing:
+      # Boot turns trace propagation off together with export in tests; no OTLP endpoint is set, so nothing is sent.
+      export: true
   sql:
     init:
       mode: always
   kafka:
+    template:
+      observation-enabled: true
     producer:
       acks: all
       value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
@@ -10,6 +16,11 @@ spring:
         enable.idempotence: true
         schema.registry.url: mock://messaging-test
         value.subject.name.strategy: io.confluent.kafka.serializers.subject.TopicRecordNameStrategy
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
 
 shop:
   outbox:

@@ -4,6 +4,7 @@ import com.shop.contracts.OrderCancelled;
 import com.shop.contracts.OrderLine;
 import com.shop.contracts.OrderPlaced;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.micrometer.tracing.Tracer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -50,6 +51,9 @@ class OutboxRelayTest {
     @Autowired
     KafkaConnectionDetails kafka;
 
+    @Autowired
+    Tracer tracer;
+
     @BeforeEach
     void emptyOutbox() {
         jdbc.sql("DELETE FROM outbox").update();
@@ -80,6 +84,25 @@ class OutboxRelayTest {
         assertThat(placed.getLines().getFirst().getUnitPrice()).isEqualByComparingTo("19.99");
         assertThat(jdbc.sql("SELECT count(*) FROM outbox WHERE published_at IS NULL").query(Long.class).single())
                 .isZero();
+    }
+
+    @Test
+    void continuesTraceOfTheRequestThatWroteTheEvent() {
+        var orderId = UUID.randomUUID();
+        var topic = "relay-" + orderId;
+        var span = tracer.nextSpan().name("place order").start();
+        try (var ignored = tracer.withSpan(span)) {
+            transactions.executeWithoutResult(s -> writer.append(topic, orderId.toString(), cancelled(orderId)));
+        } finally {
+            span.end();
+        }
+
+        relay.publishPending();
+
+        var traceId = span.context().traceId();
+        assertThat(jdbc.sql("SELECT headers ->> 'traceparent' FROM outbox WHERE aggregate_id = ?")
+                .param(orderId.toString()).query(String.class).single()).contains(traceId);
+        assertThat(header(consume(topic, 1).getFirst(), "traceparent")).contains(traceId);
     }
 
     @Test

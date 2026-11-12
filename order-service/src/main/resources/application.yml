@@ -11,6 +11,8 @@ spring:
     open-in-view: false
   kafka:
     bootstrap-servers: localhost:9092
+    template:
+      observation-enabled: true
     properties:
       schema.registry.url: http://localhost:8085
     consumer:
@@ -22,6 +24,7 @@ spring:
         specific.avro.reader: true
     listener:
       ack-mode: record
+      observation-enabled: true
     producer:
       acks: all
       value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
@@ -94,4 +97,17 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,circuitbreakers,circuitbreakerevents,retryevents
+        include: health,prometheus,circuitbreakers,circuitbreakerevents,retryevents
+  tracing:
+    sampling:
+      probability: 1.0
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/traces
+  otlp:
+    metrics:
+      export:
+        # Metrics are scraped from /actuator/prometheus; Jaeger only takes traces.
+        enabled: false

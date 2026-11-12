@@ -2,7 +2,10 @@ package com.shop.messaging;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import org.apache.avro.util.ClassSecurityValidator;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -25,17 +28,20 @@ public class MessagingAutoConfiguration {
     }
 
     @Bean
-    OutboxWriter outboxWriter(JdbcClient jdbc) {
-        return new OutboxWriter(jdbc);
+    OutboxWriter outboxWriter(JdbcClient jdbc, ObjectProvider<Tracer> tracer, ObjectProvider<Propagator> propagator) {
+        return new OutboxWriter(jdbc, tracer.getIfAvailable(() -> Tracer.NOOP),
+                propagator.getIfAvailable(() -> Propagator.NOOP));
     }
 
     @Bean
     OutboxRelay outboxRelay(JdbcClient jdbc, TransactionOperations transactions, KafkaTemplate<String, Object> kafka,
-                            OutboxProperties properties, MeterRegistry meterRegistry) {
+                            OutboxProperties properties, ObjectProvider<Tracer> tracer,
+                            ObjectProvider<Propagator> propagator, MeterRegistry meterRegistry) {
         Gauge.builder("outbox.pending", jdbc,
                         j -> j.sql("SELECT count(*) FROM outbox WHERE published_at IS NULL").query(Long.class).single())
                 .register(meterRegistry);
-        return new OutboxRelay(jdbc, transactions, kafka, properties, meterRegistry);
+        return new OutboxRelay(jdbc, transactions, kafka, properties, tracer.getIfAvailable(() -> Tracer.NOOP),
+                propagator.getIfAvailable(() -> Propagator.NOOP), meterRegistry);
     }
 
     @Bean

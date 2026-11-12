@@ -2,6 +2,8 @@ package com.shop.messaging;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumReader;
@@ -14,6 +16,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.support.TransactionOperations;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -32,21 +37,29 @@ public class OutboxRelay {
     // Any constant works: each service has its own database, so the lock only competes with copies of the same service.
     private static final long LOCK_KEY = 7_420_211L;
 
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final TypeReference<Map<String, String>> HEADERS = new TypeReference<>() {
+    };
+
     private final JdbcClient jdbc;
     private final TransactionOperations transactions;
     private final KafkaTemplate<String, Object> kafka;
     private final OutboxProperties properties;
+    private final Tracer tracer;
+    private final Propagator propagator;
     private final Counter failures;
 
     private Duration backoff = Duration.ZERO;
     private Instant nextAttempt = Instant.MIN;
 
     public OutboxRelay(JdbcClient jdbc, TransactionOperations transactions, KafkaTemplate<String, Object> kafka,
-                       OutboxProperties properties, MeterRegistry meterRegistry) {
+                       OutboxProperties properties, Tracer tracer, Propagator propagator, MeterRegistry meterRegistry) {
         this.jdbc = jdbc;
         this.transactions = transactions;
         this.kafka = kafka;
         this.properties = properties;
+        this.tracer = tracer;
+        this.propagator = propagator;
         this.failures = Counter.builder("outbox.publish.failures").register(meterRegistry);
     }
 
@@ -80,7 +93,7 @@ public class OutboxRelay {
                 return 0;
             }
             List<OutboxRecord> batch = jdbc.sql("""
-                            SELECT id, topic, msg_key, event_type, payload
+                            SELECT id, topic, msg_key, event_type, payload, headers::text AS headers
                             FROM outbox
                             WHERE published_at IS NULL
                             ORDER BY seq
@@ -108,7 +121,14 @@ public class OutboxRelay {
             message.headers()
                     .add(EventHeaders.EVENT_ID, record.id().toString().getBytes(StandardCharsets.UTF_8))
                     .add(EventHeaders.EVENT_TYPE, simpleName(record.eventType()).getBytes(StandardCharsets.UTF_8));
-            futures.add(kafka.send(message));
+            var span = propagator.extract(JSON.readValue(record.headers(), HEADERS), Map::get)
+                    .name("outbox send")
+                    .start();
+            try (var ignored = tracer.withSpan(span)) {
+                futures.add(kafka.send(message));
+            } finally {
+                span.end();
+            }
         }
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
                 .orTimeout(properties.sendTimeout().toMillis(), TimeUnit.MILLISECONDS)
@@ -135,6 +155,6 @@ public class OutboxRelay {
         return a.compareTo(b) <= 0 ? a : b;
     }
 
-    record OutboxRecord(UUID id, String topic, String msgKey, String eventType, String payload) {
+    record OutboxRecord(UUID id, String topic, String msgKey, String eventType, String payload, String headers) {
     }
 }
