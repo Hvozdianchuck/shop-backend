@@ -160,7 +160,8 @@ class OrderEventsListenerTest {
     }
 
     private void sendOrderPlaced(UUID orderId, String sku, int quantity, UUID eventId) {
-        var event = new OrderPlaced(orderId, Instant.now(), List.of(new OrderLine(sku, quantity, new BigDecimal("10.00"))));
+        var lines = List.of(new OrderLine(sku, quantity, new BigDecimal("10.00")));
+        var event = new OrderPlaced(orderId, Instant.now(), lines, "EUR");
         KafkaTestClients.send(producer, KafkaConfig.ORDERS_TOPIC, orderId.toString(), event, eventId);
     }
 

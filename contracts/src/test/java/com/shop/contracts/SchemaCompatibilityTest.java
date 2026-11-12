@@ -45,23 +45,25 @@ class SchemaCompatibilityTest {
     static SchemaRegistryClient registry;
 
     @BeforeAll
-    static void registerCurrentSchema() throws Exception {
+    static void registerFirstVersion() throws Exception {
         registry = new CachedSchemaRegistryClient(
                 "http://" + schemaRegistry.getHost() + ":" + schemaRegistry.getMappedPort(8081), 10);
         registry.updateCompatibility(SUBJECT, "BACKWARD");
-        registry.register(SUBJECT, new AvroSchema(OrderPlaced.getClassSchema()));
+        registry.register(SUBJECT, schema("OrderPlaced-v1.avsc"));
     }
 
     @Test
-    void acceptsNewFieldWithDefault() throws Exception {
-        var candidate = candidate("OrderPlaced-optional-field.avsc");
+    void currentSchemaCanReadEventsWrittenWithFirstVersion() throws Exception {
+        var current = new AvroSchema(OrderPlaced.getClassSchema());
 
-        assertThat(registry.testCompatibility(SUBJECT, candidate)).isTrue();
+        assertThat(registry.testCompatibility(SUBJECT, current)).isTrue();
+        registry.register(SUBJECT, current);
+        assertThat(registry.getAllVersions(SUBJECT)).hasSize(2);
     }
 
     @Test
     void rejectsNewRequiredField() throws Exception {
-        var candidate = candidate("OrderPlaced-required-field.avsc");
+        var candidate = schema("OrderPlaced-required-field.avsc");
 
         assertThat(registry.testCompatibility(SUBJECT, candidate)).isFalse();
         assertThatThrownBy(() -> registry.register(SUBJECT, candidate))
@@ -69,8 +71,8 @@ class SchemaCompatibilityTest {
                 .satisfies(e -> assertThat(((RestClientException) e).getStatus()).isEqualTo(409));
     }
 
-    private static AvroSchema candidate(String file) throws IOException {
-        try (InputStream in = SchemaCompatibilityTest.class.getResourceAsStream("/candidates/" + file)) {
+    private static AvroSchema schema(String file) throws IOException {
+        try (InputStream in = SchemaCompatibilityTest.class.getResourceAsStream("/schemas/" + file)) {
             return new AvroSchema(new String(in.readAllBytes(), StandardCharsets.UTF_8));
         }
     }

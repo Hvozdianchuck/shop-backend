@@ -104,6 +104,7 @@ class OrderOutboxTest {
         assertThat(header(record, "eventType")).isEqualTo("OrderPlaced");
         var event = (OrderPlaced) record.value();
         assertThat(event.getOrderId()).hasToString(orderId);
+        assertThat(event.getCurrency()).isEqualTo("EUR");
         assertThat(event.getLines()).singleElement().satisfies(line -> {
             assertThat(line.getSku()).isEqualTo("MOUSE-1");
             assertThat(line.getQuantity()).isEqualTo(2);

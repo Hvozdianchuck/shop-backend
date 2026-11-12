@@ -134,7 +134,7 @@ class OutboxRelayTest {
 
     private static OrderPlaced placed(UUID orderId) {
         return new OrderPlaced(orderId, Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                List.of(new OrderLine("KBD-1", 2, new BigDecimal("19.99"))));
+                List.of(new OrderLine("KBD-1", 2, new BigDecimal("19.99"))), "EUR");
     }
 
     private static OrderCancelled cancelled(UUID orderId) {

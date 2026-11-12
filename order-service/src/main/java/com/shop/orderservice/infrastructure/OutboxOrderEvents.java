@@ -23,7 +23,11 @@ public class OutboxOrderEvents implements OrderEvents {
         var lines = order.getLines().stream()
                 .map(l -> new com.shop.contracts.OrderLine(l.sku(), l.quantity(), l.unitPrice()))
                 .toList();
-        var event = new OrderPlaced(order.getId(), Instant.now(), lines);
+        var event = OrderPlaced.newBuilder()
+                .setOrderId(order.getId())
+                .setOccurredAt(Instant.now())
+                .setLines(lines)
+                .build();
         outbox.append(KafkaConfig.ORDERS_TOPIC, order.getId().toString(), event);
     }
 

@@ -13,6 +13,7 @@
         {"name": "quantity", "type": "int"},
         {"name": "unitPrice", "type": {"type": "bytes", "logicalType": "decimal", "precision": 12, "scale": 2}}
       ]
-    }}}
+    }}},
+    {"name": "currency", "type": "string", "default": "EUR"}
   ]
 }
