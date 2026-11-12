@@ -20,7 +20,7 @@ class MessagingTestApplication {
     @Bean
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {
-        return new PostgreSQLContainer("postgres:18-alpine");
+        return new PostgreSQLContainer("pgvector/pgvector:0.8.7-pg18");
     }
 
     @Bean

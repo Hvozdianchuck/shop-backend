@@ -1,3 +1,21 @@
 spring:
   application:
     name: support-service
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:5433/support
+    username: shop
+    password: ${POSTGRES_PASSWORD:shop}
+  jpa:
+    open-in-view: false
+
+server:
+  port: 8083
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus

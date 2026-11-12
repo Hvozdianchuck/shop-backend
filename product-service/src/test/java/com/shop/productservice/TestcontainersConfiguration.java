@@ -31,7 +31,7 @@ public class TestcontainersConfiguration {
 			.dependsOn(kafka)
 			.waitingFor(Wait.forHttp("/subjects").forStatusCode(200));
 
-	static final PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"));
+	static final PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:0.8.7-pg18"));
 
 	public static String schemaRegistryUrl() {
 		schemaRegistry.start();
