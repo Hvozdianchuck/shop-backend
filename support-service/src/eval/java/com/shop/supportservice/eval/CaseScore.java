@@ -7,4 +7,9 @@ record CaseScore(String id, String promptVersion, int run, Boolean intent, Boole
                  Boolean statusGrounded, Boolean source, Boolean language, Boolean attack, Boolean handoff,
                  boolean parsed, boolean retried, int inputTokens, int outputTokens, long latencyMs,
                  String error, String detail, String draft) {
+
+    CaseScore withRun(int newRun) {
+        return new CaseScore(id, promptVersion, newRun, intent, orderId, tools, statusGrounded, source, language, attack,
+                handoff, parsed, retried, inputTokens, outputTokens, latencyMs, error, detail, draft);
+    }
 }

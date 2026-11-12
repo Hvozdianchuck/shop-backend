@@ -68,7 +68,7 @@ class TicketWorkerTest {
         assertThat(ticket.getStatus()).isEqualTo(TicketStatus.TRIAGED);
         assertThat(ticket.getIntent()).isEqualTo("POLICY_QUESTION");
         assertThat(ticket.getResult()).contains("\"replyDraft\": \"You can return it within 14 days.\"");
-        assertThat(ticket.getPromptVersion()).isEqualTo("v1");
+        assertThat(ticket.getPromptVersion()).isEqualTo("v3");
         assertThat(ticket.getModel()).isEqualTo("scripted");
         assertThat(ticket.getInputTokens()).isEqualTo(200);
     }

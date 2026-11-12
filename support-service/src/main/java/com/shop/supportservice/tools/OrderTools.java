@@ -25,10 +25,10 @@ public class OrderTools {
         this.journal = journal;
     }
 
+    // No example id in the descriptions: the model used to call getOrder with the example when a ticket had no number.
     @Tool(name = GET_ORDER, description = "Returns the status, creation date and number of items of a shop order. "
-            + "Call it whenever the customer gives an order number.")
-    public OrderInfo getOrder(@ToolParam(description = "Order number, a UUID like 550e8400-e29b-41d4-a716-446655440000")
-                              String orderId) {
+            + "Call it only when the customer's message contains an order number.")
+    public OrderInfo getOrder(@ToolParam(description = "The order number exactly as the customer wrote it") String orderId) {
         journal.called(GET_ORDER);
         var id = parse(orderId);
         if (id == null) {

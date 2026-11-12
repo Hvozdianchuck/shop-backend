@@ -49,7 +49,7 @@ server:
 
 shop:
   triage:
-    prompt-version: v1
+    prompt-version: v3
   tickets:
     lease: 5m
     max-attempts: 3

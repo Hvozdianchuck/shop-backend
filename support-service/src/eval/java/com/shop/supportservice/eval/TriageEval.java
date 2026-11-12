@@ -58,7 +58,7 @@ class TriageEval {
     @Test
     void evaluate() throws IOException {
         var split = System.getProperty("eval.split", "work");
-        var versions = List.of(System.getProperty("eval.prompts", "v1").split(","));
+        var versions = List.of(System.getProperty("eval.prompts", "v3").split(","));
         var runs = Integer.getInteger("eval.runs", 1);
         var ids = Set.of(System.getProperty("eval.ids", "").split(","));
         var cases = EvalData.read("dataset.jsonl", EvalCase.class, json).stream()
