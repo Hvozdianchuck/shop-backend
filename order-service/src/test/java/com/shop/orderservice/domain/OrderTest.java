@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
@@ -36,13 +37,43 @@ class OrderTest {
     }
 
     @Test
-    void finalStatusCannotChange() {
+    void decidedOrderIsNotConfirmedOrRejectedAgain() {
         var order = Order.place(lines);
         order.confirm();
 
         assertThatIllegalStateException().isThrownBy(order::reject);
         assertThatIllegalStateException().isThrownBy(order::confirm);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+    }
+
+    @Test
+    void pendingAndConfirmedOrdersCanBeCancelled() {
+        var pending = Order.place(lines);
+        var confirmed = Order.place(lines);
+        confirmed.confirm();
+
+        assertThat(pending.cancel()).isTrue();
+        assertThat(confirmed.cancel()).isTrue();
+        assertThat(pending.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(confirmed.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+    }
+
+    @Test
+    void cancellingAgainChangesNothing() {
+        var order = Order.place(lines);
+        order.cancel();
+
+        assertThat(order.cancel()).isFalse();
+        assertThatIllegalStateException().isThrownBy(order::confirm);
+    }
+
+    @Test
+    void rejectedOrderCannotBeCancelled() {
+        var order = Order.place(lines);
+        order.reject();
+
+        assertThatExceptionOfType(OrderNotCancellableException.class).isThrownBy(order::cancel);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.REJECTED);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.shop.productservice.messaging;
 
+import com.shop.contracts.OrderCancelled;
 import com.shop.contracts.OrderPlaced;
 import com.shop.messaging.EventHeaders;
 import com.shop.messaging.ProcessedEvents;
@@ -39,6 +40,7 @@ public class OrderEventsListener {
         var eventId = EventHeaders.eventId(record.headers());
         switch (record.value()) {
             case OrderPlaced event -> orderPlaced(eventId, event);
+            case OrderCancelled event -> handleOnce(eventId, () -> reservations.release(event.getOrderId()));
             default -> throw new UnsupportedEventException(record.value().getSchema().getName());
         }
     }

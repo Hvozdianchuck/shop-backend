@@ -57,6 +57,17 @@ public class ReservationService {
         return reservations.save(Reservation.rejected(orderId, mergeBySku(requested), missingSkus)).result();
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void release(UUID orderId) {
+        var lines = reservations.findById(orderId).map(Reservation::release).orElse(List.of());
+        if (lines.isEmpty()) {
+            log.info("Order {} cancelled, no stock to return", orderId);
+            return;
+        }
+        lines.forEach(line -> stock.giveBack(line.sku(), line.quantity()));
+        log.info("Stock returned for cancelled order {}", orderId);
+    }
+
     private static List<ReservationLine> mergeBySku(List<ReservationLine> lines) {
         Map<String, Integer> quantities = lines.stream()
                 .collect(Collectors.toMap(ReservationLine::sku, ReservationLine::quantity, Integer::sum, TreeMap::new));

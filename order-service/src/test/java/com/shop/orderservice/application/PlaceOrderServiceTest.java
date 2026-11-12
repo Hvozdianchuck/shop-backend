@@ -32,7 +32,17 @@ class PlaceOrderServiceTest {
     private final FakeCatalog catalog = new FakeCatalog();
     private final OrderRepository orders = mock(OrderRepository.class);
     private final List<Order> published = new ArrayList<>();
-    private final OrderEvents events = published::add;
+    private final OrderEvents events = new OrderEvents() {
+        @Override
+        public void orderPlaced(Order order) {
+            published.add(order);
+        }
+
+        @Override
+        public void orderCancelled(Order order) {
+            throw new UnsupportedOperationException();
+        }
+    };
     private final PlaceOrderService service =
             new PlaceOrderService(catalog, orders, events, TransactionOperations.withoutTransaction());
 

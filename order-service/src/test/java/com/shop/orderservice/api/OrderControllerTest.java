@@ -1,17 +1,22 @@
 package com.shop.orderservice.api;
 
+import com.shop.orderservice.application.CancelOrderService;
 import com.shop.orderservice.application.PlaceOrderService;
+import com.shop.orderservice.application.UnknownOrderException;
 import com.shop.orderservice.application.UnknownProductsException;
 import com.shop.orderservice.domain.CatalogUnavailableException;
 import com.shop.orderservice.domain.Order;
 import com.shop.orderservice.domain.OrderLine;
+import com.shop.orderservice.domain.OrderNotCancellableException;
 import com.shop.orderservice.domain.OrderRepository;
+import com.shop.orderservice.domain.OrderStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
@@ -32,6 +37,9 @@ class OrderControllerTest {
 
     @MockitoBean
     PlaceOrderService placeOrder;
+
+    @MockitoBean
+    CancelOrderService cancelOrder;
 
     @MockitoBean
     OrderRepository orders;
@@ -88,6 +96,42 @@ class OrderControllerTest {
         when(orders.findWithLinesById(id)).thenReturn(Optional.empty());
 
         assertThat(mvc.get().uri("/api/orders/{id}", id)).hasStatus(404);
+    }
+
+    @Test
+    void returnsCancelledOrder() {
+        var order = Order.place(List.of(new OrderLine("MOUSE-1", 1, new BigDecimal("24.90"))));
+        order.cancel();
+        when(cancelOrder.cancel(order.getId())).thenReturn(order);
+
+        var result = mvc.post().uri("/api/orders/{id}/cancel", order.getId());
+
+        assertThat(result).hasStatus(200);
+        assertThat(result).bodyJson().extractingPath("$.status").isEqualTo("CANCELLED");
+    }
+
+    @Test
+    void refusesToCancelRejectedOrder() {
+        var id = UUID.randomUUID();
+        when(cancelOrder.cancel(id)).thenThrow(new OrderNotCancellableException(id, OrderStatus.REJECTED));
+
+        assertThat(mvc.post().uri("/api/orders/{id}/cancel", id)).hasStatus(409);
+    }
+
+    @Test
+    void reportsConcurrentChangeAsConflict() {
+        var id = UUID.randomUUID();
+        when(cancelOrder.cancel(id)).thenThrow(new ObjectOptimisticLockingFailureException(Order.class, id));
+
+        assertThat(mvc.post().uri("/api/orders/{id}/cancel", id)).hasStatus(409);
+    }
+
+    @Test
+    void returnsNotFoundWhenCancellingUnknownOrder() {
+        var id = UUID.randomUUID();
+        when(cancelOrder.cancel(id)).thenThrow(new UnknownOrderException(id));
+
+        assertThat(mvc.post().uri("/api/orders/{id}/cancel", id)).hasStatus(404);
     }
 
     private MockMvcTester.MockMvcRequestBuilder post(String body) {

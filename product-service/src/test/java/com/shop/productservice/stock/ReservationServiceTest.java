@@ -89,6 +89,33 @@ class ReservationServiceTest {
     }
 
     @Test
+    void returnsStockOnlyOnceWhenCancelledTwice() {
+        var mouse = product(10);
+        var orderId = UUID.randomUUID();
+        reserve(orderId, List.of(new ReservationLine(mouse, 4)));
+
+        release(orderId);
+        release(orderId);
+
+        assertThat(available(mouse)).isEqualTo(10);
+        assertThat(reservations.findById(orderId)).get()
+                .extracting(r -> r.result().status())
+                .isEqualTo(ReservationStatus.RELEASED);
+    }
+
+    @Test
+    void returnsNothingForRejectedOrUnknownOrder() {
+        var monitor = product(1);
+        var rejectedOrder = UUID.randomUUID();
+        reject(rejectedOrder, List.of(new ReservationLine(monitor, 2)), List.of(monitor));
+
+        release(rejectedOrder);
+        release(UUID.randomUUID());
+
+        assertThat(available(monitor)).isEqualTo(1);
+    }
+
+    @Test
     void lastUnitGoesToExactlyOneOfTwoConcurrentOrders() throws Exception {
         var monitor = product(1);
         var start = new CountDownLatch(1);
@@ -115,6 +142,10 @@ class ReservationServiceTest {
 
     private ReservationResult reject(UUID orderId, List<ReservationLine> lines, List<String> missingSkus) {
         return transactions.execute(status -> service.reject(orderId, lines, missingSkus));
+    }
+
+    private void release(UUID orderId) {
+        transactions.executeWithoutResult(status -> service.release(orderId));
     }
 
     private String product(int available) {

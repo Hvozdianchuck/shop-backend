@@ -1,5 +1,6 @@
 package com.shop.orderservice.api;
 
+import com.shop.orderservice.application.CancelOrderService;
 import com.shop.orderservice.application.PlaceOrderService;
 import com.shop.orderservice.application.RequestedItem;
 import com.shop.orderservice.domain.OrderRepository;
@@ -23,10 +24,12 @@ import java.util.UUID;
 public class OrderController {
 
     private final PlaceOrderService placeOrder;
+    private final CancelOrderService cancelOrder;
     private final OrderRepository orders;
 
-    public OrderController(PlaceOrderService placeOrder, OrderRepository orders) {
+    public OrderController(PlaceOrderService placeOrder, CancelOrderService cancelOrder, OrderRepository orders) {
         this.placeOrder = placeOrder;
+        this.cancelOrder = cancelOrder;
         this.orders = orders;
     }
 
@@ -42,6 +45,11 @@ public class OrderController {
                 .buildAndExpand(order.getId())
                 .toUri();
         return ResponseEntity.accepted().location(location).body(OrderResponse.from(order));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public OrderResponse cancel(@PathVariable UUID id) {
+        return OrderResponse.from(cancelOrder.cancel(id));
     }
 
     @GetMapping("/{id}")

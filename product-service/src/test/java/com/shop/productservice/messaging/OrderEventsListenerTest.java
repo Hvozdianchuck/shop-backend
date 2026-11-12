@@ -1,5 +1,6 @@
 package com.shop.productservice.messaging;
 
+import com.shop.contracts.OrderCancelled;
 import com.shop.contracts.OrderLine;
 import com.shop.contracts.OrderPlaced;
 import com.shop.contracts.StockRejected;
@@ -36,6 +37,7 @@ import static com.shop.productservice.KafkaTestClients.header;
 import static com.shop.productservice.KafkaTestClients.recordFor;
 import static com.shop.productservice.KafkaTestClients.recordsFor;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @SpringBootTest
 @Import({TestcontainersConfiguration.class, OrderEventsListenerTest.OrdersTopic.class})
@@ -109,6 +111,21 @@ class OrderEventsListenerTest {
 
         assertThat(recordsFor(stockEvents, orderId.toString(), Duration.ofSeconds(5), 2)).hasSize(1);
         assertThat(available(sku)).isEqualTo(3);
+    }
+
+    @Test
+    void returnsStockWhenReservedOrderIsCancelled() {
+        var sku = product(5);
+        var orderId = UUID.randomUUID();
+        sendOrderPlaced(orderId, sku, 2, UUID.randomUUID());
+        recordFor(stockEvents, orderId.toString());
+
+        KafkaTestClients.send(producer, KafkaConfig.ORDERS_TOPIC, orderId.toString(),
+                new OrderCancelled(orderId, Instant.now()), UUID.randomUUID());
+
+        await().atMost(Duration.ofSeconds(10)).until(() -> available(sku) == 5);
+        assertThat(jdbc.sql("select status from reservations where order_id = ?").param(orderId)
+                .query(String.class).single()).isEqualTo("RELEASED");
     }
 
     @Test

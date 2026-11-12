@@ -67,6 +67,22 @@ public class Order {
         moveTo(OrderStatus.REJECTED);
     }
 
+    /**
+     * Pending and confirmed orders can be cancelled. Returns false if the order is already cancelled,
+     * so a repeated request changes nothing and publishes nothing.
+     */
+    public boolean cancel() {
+        return switch (status) {
+            case CANCELLED -> false;
+            case REJECTED -> throw new OrderNotCancellableException(id, status);
+            case PENDING, CONFIRMED -> {
+                status = OrderStatus.CANCELLED;
+                updatedAt = Instant.now();
+                yield true;
+            }
+        };
+    }
+
     public boolean isPending() {
         return status == OrderStatus.PENDING;
     }

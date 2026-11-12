@@ -9,4 +9,8 @@ public interface StockRepository extends JpaRepository<Stock, String> {
     @Modifying
     @Query("update Stock s set s.available = s.available - :quantity where s.sku = :sku and s.available >= :quantity")
     int take(String sku, int quantity);
+
+    @Modifying
+    @Query("update Stock s set s.available = s.available + :quantity where s.sku = :sku")
+    int giveBack(String sku, int quantity);
 }

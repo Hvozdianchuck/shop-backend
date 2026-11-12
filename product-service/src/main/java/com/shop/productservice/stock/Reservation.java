@@ -51,6 +51,15 @@ public class Reservation {
         return new Reservation(orderId, ReservationStatus.REJECTED, lines, missingSkus);
     }
 
+    /** Returns the lines to put back on stock; nothing if stock was never taken or is already back. */
+    List<ReservationLine> release() {
+        if (status != ReservationStatus.RESERVED) {
+            return List.of();
+        }
+        status = ReservationStatus.RELEASED;
+        return List.copyOf(lines);
+    }
+
     public ReservationResult result() {
         return new ReservationResult(orderId, status, List.of(missingSkus));
     }
