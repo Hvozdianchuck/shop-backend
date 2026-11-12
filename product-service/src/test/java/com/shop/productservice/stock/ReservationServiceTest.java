@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,13 +30,16 @@ class ReservationServiceTest {
     @Autowired
     JdbcClient jdbc;
 
+    @Autowired
+    TransactionTemplate transactions;
+
     @Test
     void reservesAllLinesAndTakesStock() {
         var mouse = product(10);
         var cable = product(3);
         var orderId = UUID.randomUUID();
 
-        var result = service.reserve(orderId, List.of(new ReservationLine(mouse, 2), new ReservationLine(cable, 3)));
+        var result = reserve(orderId, List.of(new ReservationLine(mouse, 2), new ReservationLine(cable, 3)));
 
         assertThat(result).isEqualTo(new ReservationResult(orderId, ReservationStatus.RESERVED, List.of()));
         assertThat(available(mouse)).isEqualTo(8);
@@ -43,32 +47,32 @@ class ReservationServiceTest {
     }
 
     @Test
-    void rejectsWholeOrderWhenOneLineIsShort() {
+    void takesNothingWhenOneLineIsShort() {
         var mouse = product(10);
         var monitor = product(1);
         var orderId = UUID.randomUUID();
+        var lines = List.of(new ReservationLine(mouse, 2), new ReservationLine(monitor, 2));
 
-        var result = service.reserve(orderId, List.of(new ReservationLine(mouse, 2), new ReservationLine(monitor, 2)));
+        assertThatThrownBy(() -> reserve(orderId, lines))
+                .isInstanceOfSatisfying(InsufficientStockException.class,
+                        e -> assertThat(e.getMissingSkus()).containsExactly(monitor));
 
-        assertThat(result).isEqualTo(new ReservationResult(orderId, ReservationStatus.REJECTED, List.of(monitor)));
         assertThat(available(mouse)).isEqualTo(10);
         assertThat(available(monitor)).isEqualTo(1);
-        assertThat(reservations.findById(orderId)).get()
-                .extracting(Reservation::result)
-                .isEqualTo(result);
+        assertThat(reservations.findById(orderId)).isEmpty();
     }
 
     @Test
-    void repeatsStoredResultForDuplicateOrderWithoutTakingStockAgain() {
-        var mouse = product(10);
+    void storesRejectionWithMissingSkus() {
+        var monitor = product(1);
         var orderId = UUID.randomUUID();
-        var lines = List.of(new ReservationLine(mouse, 4));
 
-        var first = service.reserve(orderId, lines);
-        var second = service.reserve(orderId, lines);
+        var result = reject(orderId, List.of(new ReservationLine(monitor, 2)), List.of(monitor));
 
-        assertThat(second).isEqualTo(first);
-        assertThat(available(mouse)).isEqualTo(6);
+        assertThat(result).isEqualTo(new ReservationResult(orderId, ReservationStatus.REJECTED, List.of(monitor)));
+        assertThat(reservations.findById(orderId)).get()
+                .extracting(Reservation::result)
+                .isEqualTo(result);
     }
 
     @Test
@@ -76,7 +80,7 @@ class ReservationServiceTest {
         var mouse = product(10);
         var orderId = UUID.randomUUID();
 
-        assertThatThrownBy(() -> service.reserve(orderId,
+        assertThatThrownBy(() -> reserve(orderId,
                 List.of(new ReservationLine(mouse, 1), new ReservationLine("NO-SUCH-SKU", 1))))
                 .isInstanceOf(UnknownSkuException.class);
 
@@ -88,21 +92,29 @@ class ReservationServiceTest {
     void lastUnitGoesToExactlyOneOfTwoConcurrentOrders() throws Exception {
         var monitor = product(1);
         var start = new CountDownLatch(1);
-        List<CompletableFuture<ReservationResult>> results;
+        List<CompletableFuture<String>> results;
 
         try (var pool = Executors.newFixedThreadPool(2)) {
             results = List.of(1, 2).stream()
                     .map(i -> CompletableFuture.supplyAsync(() -> {
                         await(start);
-                        return service.reserve(UUID.randomUUID(), List.of(new ReservationLine(monitor, 1)));
-                    }, pool))
+                        return reserve(UUID.randomUUID(), List.of(new ReservationLine(monitor, 1))).status().name();
+                    }, pool).exceptionally(e -> e.getCause().getClass().getSimpleName()))
                     .toList();
             start.countDown();
         }
 
-        assertThat(results).extracting(f -> f.join().status())
-                .containsExactlyInAnyOrder(ReservationStatus.RESERVED, ReservationStatus.REJECTED);
+        assertThat(results).extracting(CompletableFuture::join)
+                .containsExactlyInAnyOrder("RESERVED", "InsufficientStockException");
         assertThat(available(monitor)).isZero();
+    }
+
+    private ReservationResult reserve(UUID orderId, List<ReservationLine> lines) {
+        return transactions.execute(status -> service.reserve(orderId, lines));
+    }
+
+    private ReservationResult reject(UUID orderId, List<ReservationLine> lines, List<String> missingSkus) {
+        return transactions.execute(status -> service.reject(orderId, lines, missingSkus));
     }
 
     private String product(int available) {

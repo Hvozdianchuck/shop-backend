@@ -60,7 +60,7 @@ public class KafkaConfig {
                     e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
             deadLetters.accept(record, e);
         }, backOff);
-        handler.addNotRetryableExceptions(UnknownSkuException.class);
+        handler.addNotRetryableExceptions(UnknownSkuException.class, UnsupportedEventException.class);
         return handler;
     }
 }

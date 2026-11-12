@@ -32,9 +32,6 @@ public class OutboxRelay {
     // Any constant works: each service has its own database, so the lock only competes with copies of the same service.
     private static final long LOCK_KEY = 7_420_211L;
 
-    public static final String EVENT_ID_HEADER = "eventId";
-    public static final String EVENT_TYPE_HEADER = "eventType";
-
     private final JdbcClient jdbc;
     private final TransactionOperations transactions;
     private final KafkaTemplate<String, Object> kafka;
@@ -109,8 +106,8 @@ public class OutboxRelay {
         for (var record : batch) {
             var message = new ProducerRecord<String, Object>(record.topic(), record.msgKey(), decode(record));
             message.headers()
-                    .add(EVENT_ID_HEADER, record.id().toString().getBytes(StandardCharsets.UTF_8))
-                    .add(EVENT_TYPE_HEADER, simpleName(record.eventType()).getBytes(StandardCharsets.UTF_8));
+                    .add(EventHeaders.EVENT_ID, record.id().toString().getBytes(StandardCharsets.UTF_8))
+                    .add(EventHeaders.EVENT_TYPE, simpleName(record.eventType()).getBytes(StandardCharsets.UTF_8));
             futures.add(kafka.send(message));
         }
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))

@@ -11,22 +11,31 @@ spring:
     open-in-view: false
   kafka:
     bootstrap-servers: localhost:9092
+    properties:
+      schema.registry.url: http://localhost:8085
     consumer:
       group-id: product-service
       auto-offset-reset: earliest
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-        spring.json.value.default.type: com.shop.productservice.messaging.OrderPlaced
-        spring.json.use.type.headers: false
+        spring.deserializer.value.delegate.class: io.confluent.kafka.serializers.KafkaAvroDeserializer
+        specific.avro.reader: true
     listener:
       ack-mode: record
     producer:
       acks: all
-      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
       properties:
         enable.idempotence: true
-        spring.json.add.type.headers: false
+        value.subject.name.strategy: io.confluent.kafka.serializers.subject.TopicRecordNameStrategy
+        # Fail a send within the relay's 10 s wait instead of the default 2 minutes, so a dead broker shows up quickly.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 8000
 
 server:
   port: 8082
+
+shop:
+  avro:
+    trusted-packages: com.shop.contracts

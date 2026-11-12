@@ -3,7 +3,8 @@ package com.shop.productservice.stock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionOperations;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,31 +20,19 @@ public class ReservationService {
 
     private final StockRepository stock;
     private final ReservationRepository reservations;
-    private final TransactionOperations transaction;
 
-    public ReservationService(StockRepository stock, ReservationRepository reservations,
-                              TransactionOperations transaction) {
+    public ReservationService(StockRepository stock, ReservationRepository reservations) {
         this.stock = stock;
         this.reservations = reservations;
-        this.transaction = transaction;
     }
 
+    /**
+     * Takes stock for every line or throws {@link InsufficientStockException}. The caller's transaction then rolls
+     * back, which also returns stock already taken for the other lines.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
     public ReservationResult reserve(UUID orderId, List<ReservationLine> requested) {
-        var existing = reservations.findById(orderId);
-        if (existing.isPresent()) {
-            log.info("Order {} already handled, repeating the stored result", orderId);
-            return existing.get().result();
-        }
         var lines = mergeBySku(requested);
-        try {
-            return transaction.execute(status -> takeAll(orderId, lines));
-        } catch (InsufficientStockException e) {
-            log.info("Order {} rejected, not enough {}", orderId, e.missingSkus);
-            return transaction.execute(status -> reservations.save(Reservation.rejected(orderId, lines, e.missingSkus)).result());
-        }
-    }
-
-    private ReservationResult takeAll(UUID orderId, List<ReservationLine> lines) {
         var missing = new ArrayList<String>();
         // Lines are sorted by SKU, so two orders always lock stock rows in the same order and cannot deadlock.
         for (var line : lines) {
@@ -62,21 +51,17 @@ public class ReservationService {
         return reservations.save(Reservation.reserved(orderId, lines)).result();
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
+    public ReservationResult reject(UUID orderId, List<ReservationLine> requested, List<String> missingSkus) {
+        log.info("Order {} rejected, not enough {}", orderId, missingSkus);
+        return reservations.save(Reservation.rejected(orderId, mergeBySku(requested), missingSkus)).result();
+    }
+
     private static List<ReservationLine> mergeBySku(List<ReservationLine> lines) {
         Map<String, Integer> quantities = lines.stream()
                 .collect(Collectors.toMap(ReservationLine::sku, ReservationLine::quantity, Integer::sum, TreeMap::new));
         return quantities.entrySet().stream()
                 .map(e -> new ReservationLine(e.getKey(), e.getValue()))
                 .toList();
-    }
-
-    private static class InsufficientStockException extends RuntimeException {
-
-        private final List<String> missingSkus;
-
-        InsufficientStockException(List<String> missingSkus) {
-            super(null, null, false, false);
-            this.missingSkus = List.copyOf(missingSkus);
-        }
     }
 }
