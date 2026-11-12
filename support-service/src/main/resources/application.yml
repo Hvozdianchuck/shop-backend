@@ -12,9 +12,23 @@ spring:
   ai:
     ollama:
       base-url: http://localhost:11434
+      chat:
+        model: qwen3:8b
+        temperature: 0.0
+        num-ctx: 8192
+        # Thinking makes qwen3 several times slower on a CPU; the eval decides whether we need it.
+        think: false
+        keep-alive: 2h
       embedding:
-        options:
-          model: bge-m3
+        model: bge-m3
+        keep-alive: 2h
+    retry:
+      # Network errors and 5xx from Ollama; a reply that does not parse is retried separately, once.
+      max-attempts: 3
+      backoff:
+        initial-interval: 2s
+        multiplier: 2
+        max-interval: 10s
     vectorstore:
       pgvector:
         table-name: policy_chunks
@@ -32,6 +46,14 @@ spring:
 server:
   port: 8083
   shutdown: graceful
+
+shop:
+  triage:
+    prompt-version: v1
+  tickets:
+    lease: 5m
+    max-attempts: 3
+    retry-delay: 1m
 
 order-service:
   base-url: http://localhost:8081
@@ -51,6 +73,14 @@ resilience4j:
           - org.springframework.web.client.ResourceAccessException
   circuitbreaker:
     instances:
+      model:
+        sliding-window-size: 5
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        # The worker makes no calls while the circuit is open, so nothing would ever move it to half-open.
+        automatic-transition-from-open-to-half-open-enabled: true
+        permitted-number-of-calls-in-half-open-state: 1
       orders:
         sliding-window-size: 10
         minimum-number-of-calls: 5

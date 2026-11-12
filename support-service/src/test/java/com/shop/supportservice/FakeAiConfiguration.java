@@ -15,4 +15,10 @@ public class FakeAiConfiguration {
                 .similar("do you take blik", 0)
                 .similar("delivery - ", 0);
     }
+
+    @Bean
+    @Primary
+    ScriptedChatModel scriptedChatModel() {
+        return new ScriptedChatModel();
+    }
 }

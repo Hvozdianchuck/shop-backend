@@ -1,0 +1,11 @@
+# Tests run the worker by hand. A scheduled one in a cached context would grab tickets created by other tests.
+shop:
+  tickets:
+    worker-enabled: false
+    retry-delay: 0s
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      model:
+        wait-duration-in-open-state: 1s

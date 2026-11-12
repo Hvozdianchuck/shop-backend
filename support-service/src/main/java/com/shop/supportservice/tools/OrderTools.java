@@ -48,7 +48,7 @@ public class OrderTools {
         }
     }
 
-    static UUID parse(String orderId) {
+    public static UUID parse(String orderId) {
         var value = orderId.strip().replaceFirst("^#", "");
         value = UUID_WITHOUT_DASHES.matcher(value).replaceFirst("$1-$2-$3-$4-$5");
         return UUID_FORMAT.matcher(value).matches() ? UUID.fromString(value) : null;
