@@ -85,3 +85,14 @@ limiter, so for this project Resilience4j is used for all of it.
 ## Actuator
 
 `/actuator/circuitbreakers`, `/actuator/circuitbreakerevents`, `/actuator/retryevents` are exposed in order-service.
+
+## Which HTTP client is under RestClient
+
+- Boot picks the request factory by what is on the classpath: Apache HttpClient 5 first, then Jetty, Reactor
+  Netty, then the JDK client.
+- Adding the Schema Registry client brought `httpclient5` in transitively, and `RestClient` switched to it
+  without any change in our code.
+- Apache's default retry strategy retries `503` (and `429`) once after 1 s on its own. Under the Resilience4j
+  retry that made 6 calls instead of 3 and +3 s; `ProductCatalogClientTest.retriesOnlyServerErrorsAndTimeouts`
+  caught it.
+- Fix: `spring.http.clients.imperative.factory: jdk`. Lesson: one retry layer, and know which client is used.

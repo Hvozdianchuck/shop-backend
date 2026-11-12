@@ -14,6 +14,15 @@ Content-Type: application/json
 ### Check its status (PENDING right after the POST, then CONFIRMED)
 GET http://localhost:8081/api/orders/{{orderId}}
 
+### Cancel it: stock goes back to product-service
+POST http://localhost:8081/api/orders/{{orderId}}/cancel
+
+### Cancelling again changes nothing -> 200, still CANCELLED
+POST http://localhost:8081/api/orders/{{orderId}}/cancel
+
+### Latest orders with their lines, newest first
+GET http://localhost:8081/api/orders?page=0&size=20
+
 ### More monitors than in stock (5) -> REJECTED a moment later
 POST http://localhost:8081/api/orders
 Content-Type: application/json
@@ -28,6 +37,9 @@ Content-Type: application/json
 
 ### Check the rejected order
 GET http://localhost:8081/api/orders/{{orderId}}
+
+### A rejected order cannot be cancelled -> 409
+POST http://localhost:8081/api/orders/{{orderId}}/cancel
 
 ### Unknown and inactive products -> 422 with unknownSkus
 POST http://localhost:8081/api/orders
@@ -58,3 +70,12 @@ GET http://localhost:8081/actuator/retryevents
 
 ###
 GET http://localhost:8081/actuator/circuitbreakerevents
+
+### Events waiting in the outbox, send failures, skipped duplicates, consumer lag
+GET http://localhost:8081/actuator/prometheus
+
+### Liveness: the process only
+GET http://localhost:8081/actuator/health/liveness
+
+### Readiness: the process and the database, not Kafka
+GET http://localhost:8081/actuator/health/readiness
